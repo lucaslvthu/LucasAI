@@ -4,20 +4,21 @@ from pymongo import MongoClient
 
 # 1. Cấu hình bảo mật
 try:
-    # LẤY API KEY TỪ SECRETS
+    # Lấy API Key từ Secrets
     api_key = st.secrets["GEMINI_API_KEY"]
     
-    # CẤU HÌNH QUAN TRỌNG: Ép sử dụng transport='rest' để dùng API v1
-    # Điều này sẽ giải quyết triệt để lỗi 404 v1beta trong logs của bạn
+    # CẤU HÌNH QUAN TRỌNG: Ép sử dụng transport='rest' để bắt buộc dùng API v1
+    # Điều này sẽ giải quyết lỗi 404 v1beta mà bạn đang gặp phải
     genai.configure(api_key=api_key, transport='rest')
     
+    # Kết nối MongoDB (Mật khẩu: lucaslvthu)
     client = MongoClient(st.secrets["MONGO_URL"])
     db = client["LucasAI_DB"]
     history_col = db["chat_history"]
 except Exception as e:
     st.error(f"Lỗi cấu hình: {e}")
 
-# 2. KHỞI TẠO MODEL (Dùng tên trực tiếp)
+# 2. KHỞI TẠO MODEL (Dùng tên trực tiếp, không có tiền tố models/)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 st.title("🤖 Trợ lý Lucas AI")
@@ -33,10 +34,9 @@ if user_input:
         if response.text:
             st.markdown(f"**AI trả lời:** \n\n {response.text}")
             
-            # Lưu vào MongoDB (Mật khẩu: lucaslvthu)
+            # Lưu vào MongoDB
             history_col.insert_one({"question": user_input, "answer": response.text})
-            st.toast("✅ Đã ghi nhớ vào database!")
+            st.toast("✅ Đã ghi nhớ!")
     except Exception as e:
-        # Nếu vẫn gặp lỗi, hiển thị chi tiết để xử lý
+        # Nếu vẫn lỗi, hiển thị chi tiết để xử lý
         st.error(f"Lỗi hệ thống: {e}")
-        st.info("Hãy đảm bảo bạn đã nhấn 'Save' trong phần Secrets của Streamlit.")

@@ -2,7 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 from pymongo import MongoClient
 
-# 1. Cấu hình bảo mật
+# 1. Cấu hình bảo mật từ Secrets
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     client = MongoClient(st.secrets["MONGO_URL"])
@@ -11,25 +11,24 @@ try:
 except Exception as e:
     st.error(f"Lỗi cấu hình: {e}")
 
-# 2. CHỐT MODEL: Chỉ dùng duy nhất gemini-1.5-flash
-# Đây là model mà API của bạn hỗ trợ tốt nhất
+# 2. KHỞI TẠO MODEL (Chỉ dùng bản Flash ổn định nhất)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 st.title("🤖 Trợ lý Lucas AI")
-st.success("Hệ thống đã sẵn sàng!")
+st.success("Hệ thống đã nhận diện API Key mới!")
 
-user_input = st.text_input("Nhập câu hỏi của bạn:", placeholder="Ví dụ: Chào bạn...")
+user_input = st.text_input("Hãy hỏi tôi bất cứ điều gì:", placeholder="Chào Lucas...")
 
 if user_input:
     try:
-        # Gọi AI (Không dùng bản pro cũ để tránh lỗi 404)
+        # Gọi AI trả lời
         response = model.generate_content(user_input)
         
         if response.text:
             st.markdown(f"**AI trả lời:** \n\n {response.text}")
             
-            # Lưu vào MongoDB
+            # Lưu vào MongoDB (Mật khẩu: lucaslvthu)
             history_col.insert_one({"question": user_input, "answer": response.text})
-            st.toast("✅ Đã lưu vào trí nhớ!")
+            st.toast("✅ Đã ghi nhớ vào bộ não MongoDB!")
     except Exception as e:
-        st.error(f"Lỗi hệ thống: {e}")
+        st.error(f"Lỗi: {e}")

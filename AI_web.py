@@ -18,7 +18,7 @@ try:
 except Exception as e:
     st.error(f"Lỗi cấu hình: {e}")
 
-# 2. KHỞI TẠO MODEL (Dùng tên trực tiếp, không có tiền tố models/)
+# 2. KHỞI TẠO MODEL
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 st.title("🤖 Trợ lý Lucas AI")

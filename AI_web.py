@@ -12,7 +12,7 @@ except Exception as e:
     st.error("Lỗi cấu hình Secrets. Kiểm tra lại bảng Secrets trên Streamlit!")
 
 # 2. Khởi tạo Model (Dùng tên chính xác)
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('models/gemini-1.5-flash')
 
 st.title("🚀 Gemini 1.5 Flash Đa Năng")
 st.caption("Trợ lý của Lucas - Có trí nhớ MongoDB")
@@ -30,3 +30,4 @@ if user_input:
             st.success("✅ Đã ghi nhớ vào MongoDB!")
     except Exception as e:
         st.error(f"Đã xảy ra lỗi: {e}")
+

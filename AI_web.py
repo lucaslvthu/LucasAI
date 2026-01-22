@@ -2,26 +2,22 @@ import streamlit as st
 import google.generativeai as genai
 from pymongo import MongoClient
 
-# 1. Kết nối "Trí nhớ" MongoDB
+# 1. Cấu hình bảo mật từ Secrets
 try:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     client = MongoClient(st.secrets["MONGO_URL"])
     db = client["LucasAI_DB"]
     history_col = db["chat_history"]
-except Exception as e:
-    st.error("Lỗi kết nối Database!")
+except:
+    st.error("Lỗi cấu hình Secrets!")
 
-# 2. Kết nối "Bộ não" Gemini
-try:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # SỬA LỖI 404: Dùng tên mô hình đầy đủ nhất
-    model = genai.GenerativeModel('gemini-1.5-flash-latest') 
-except Exception as e:
-    st.error("Lỗi kết nối API Key!")
+# 2. Khởi tạo Model (Dùng tên mã cơ bản nhất để tránh lỗi 404)
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 st.title("🤖 Trợ lý Lucas AI")
-st.info("Phiên bản ổn định - Đã sửa lỗi 404")
+st.info("Phiên bản đã tối ưu hóa thư viện")
 
-user_input = st.text_input("Hãy hỏi tôi bất cứ điều gì:")
+user_input = st.text_input("Hãy hỏi tôi bất cứ điều gì:", key="user_query")
 
 if user_input:
     try:
@@ -31,11 +27,15 @@ if user_input:
         if response.text:
             st.markdown(f"**AI trả lời:** \n\n {response.text}")
             
-            # Lưu vào MongoDB
+            # Lưu vào MongoDB để làm trí nhớ
             history_col.insert_one({
                 "question": user_input, 
                 "answer": response.text
             })
-            st.success("✅ Đã ghi nhớ cuộc hội thoại!")
+            st.success("✅ Đã ghi nhớ vào MongoDB!")
     except Exception as e:
-        st.error(f"Lỗi: {e}. Thử lại sau 1 phút.")
+        # Nếu vẫn lỗi 404, thử dùng model 1.0 pro
+        st.warning("Đang thử kết nối dự phòng...")
+        backup_model = genai.GenerativeModel('gemini-pro')
+        response = backup_model.generate_content(user_input)
+        st.markdown(f"**AI (Dự phòng) trả lời:** \n\n {response.text}")

@@ -2,46 +2,48 @@ import streamlit as st
 import google.generativeai as genai
 from pymongo import MongoClient
 
-# 1. Kết nối hệ thống
+# 1. Cấu hình
 try:
-    # Cấu hình API Key
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    
-    # Kết nối MongoDB
     client = MongoClient(st.secrets["MONGO_URL"])
     db = client["LucasAI_DB"]
     history_col = db["chat_history"]
 except Exception as e:
-    st.error(f"Lỗi kết nối: {e}")
+    st.error(f"Lỗi cấu hình: {e}")
 
-# 2. KHỞI TẠO MODEL (Dùng tên 'gemini-1.5-flash' - KHÔNG CÓ 'models/')
-# Streamlit sẽ tự động tìm phiên bản ổn định nhất
-model = genai.GenerativeModel('gemini-1.5-flash')
+# 2. TỰ ĐỘNG TÌM MODEL CHẠY ĐƯỢC (Sửa triệt để lỗi 404)
+@st.cache_resource
+def get_working_model():
+    # Thử danh sách các tên model phổ biến nhất
+    for model_name in ['gemini-1.5-flash', 'models/gemini-1.5-flash', 'gemini-pro']:
+        try:
+            m = genai.GenerativeModel(model_name)
+            # Thử tạo một nội dung ngắn để kiểm tra xem model có tồn tại không
+            m.generate_content("hi") 
+            return m
+        except:
+            continue
+    return None
+
+model = get_working_model()
 
 st.title("🤖 Trợ lý Lucas AI")
-st.success("Hệ thống đã sẵn sàng!")
 
-user_input = st.text_input("Nhập câu hỏi của bạn:", key="user_query")
+if model:
+    st.success(f"Hệ thống đã sẵn sàng!")
+else:
+    st.error("Lỗi: Không tìm thấy model nào phù hợp với API Key này. Hãy thử tạo lại API Key mới trên Google AI Studio.")
 
-if user_input:
+# 3. Giao diện chat
+user_input = st.text_input("Nhập câu hỏi:")
+
+if user_input and model:
     try:
-        # Gọi AI trả lời
-        # Chúng ta dùng phương thức cơ bản nhất để tránh lỗi version
         response = model.generate_content(user_input)
-        
         if response.text:
-            st.markdown(f"**AI trả lời:** \n\n {response.text}")
-            
+            st.markdown(f"**AI trả lời:** {response.text}")
             # Lưu vào MongoDB
             history_col.insert_one({"q": user_input, "a": response.text})
-            st.toast("✅ Đã ghi nhớ!")
-            
+            st.toast("Đã lưu trí nhớ!")
     except Exception as e:
-        # Nếu vẫn lỗi 404, thử phương án cuối cùng: Gọi tên đầy đủ
-        try:
-            model_alt = genai.GenerativeModel('models/gemini-1.5-flash')
-            response_alt = model_alt.generate_content(user_input)
-            st.markdown(f"**AI trả lời:** \n\n {response_alt.text}")
-        except:
-            st.error(f"Lỗi: {e}")
-            st.info("Lucas hãy kiểm tra lại xem trong mục Secrets đã nhấn nút SAVE chưa nhé!")
+        st.error(f"Lỗi khi trả lời: {e}")

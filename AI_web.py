@@ -11,9 +11,9 @@ try:
 except Exception as e:
     st.error(f"Lỗi cấu hình: {e}")
 
-# 2. CHỐT MODEL (Chỉ dùng gemini-1.5-flash)
+# 2. CHỐT MODEL (Chỉ dùng gemini-1.5-flash với đường dẫn đầy đủ)
 # Tuyệt đối không dùng 'gemini-pro' vì sẽ bị lỗi 404
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('models/gemini-1.5-flash')
 
 st.title("🤖 Trợ lý Lucas AI")
 st.success("Hệ thống đã sẵn sàng!")

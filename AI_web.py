@@ -2,7 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 from pymongo import MongoClient
 
-# 1. Cấu hình
+# 1. Kết nối hệ thống
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     client = MongoClient(st.secrets["MONGO_URL"])
@@ -11,39 +11,43 @@ try:
 except Exception as e:
     st.error(f"Lỗi cấu hình: {e}")
 
-# 2. TỰ ĐỘNG TÌM MODEL CHẠY ĐƯỢC (Sửa triệt để lỗi 404)
+# 2. HÀM TỰ ĐỘNG TÌM MODEL (Khắc phục triệt để lỗi 404)
 @st.cache_resource
-def get_working_model():
-    # Thử danh sách các tên model phổ biến nhất
-    for model_name in ['gemini-1.5-flash', 'models/gemini-1.5-flash', 'gemini-pro']:
+def find_working_model():
+    # Thử danh sách model từ mới nhất đến cũ hơn
+    available_names = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+    for name in available_names:
         try:
-            m = genai.GenerativeModel(model_name)
-            # Thử tạo một nội dung ngắn để kiểm tra xem model có tồn tại không
-            m.generate_content("hi") 
+            m = genai.GenerativeModel(name)
+            # Thử tạo một phản hồi siêu ngắn để kiểm tra
+            m.generate_content("test")
             return m
         except:
             continue
     return None
 
-model = get_working_model()
+model = find_working_model()
 
 st.title("🤖 Trợ lý Lucas AI")
 
 if model:
-    st.success(f"Hệ thống đã sẵn sàng!")
+    st.success("Hệ thống đã tìm thấy bộ não AI phù hợp và sẵn sàng!")
 else:
-    st.error("Lỗi: Không tìm thấy model nào phù hợp với API Key này. Hãy thử tạo lại API Key mới trên Google AI Studio.")
+    st.error("Không tìm thấy model khả dụng. Lucas hãy thử 'Reboot App' nhé!")
 
-# 3. Giao diện chat
-user_input = st.text_input("Nhập câu hỏi:")
+# 3. Giao diện Chat
+user_input = st.text_input("Nhập câu hỏi của bạn:", key="user_query")
 
 if user_input and model:
     try:
-        response = model.generate_content(user_input)
+        with st.spinner('Đang suy nghĩ...'):
+            response = model.generate_content(user_input)
+            
         if response.text:
-            st.markdown(f"**AI trả lời:** {response.text}")
+            st.markdown(f"**AI trả lời:** \n\n {response.text}")
+            
             # Lưu vào MongoDB
             history_col.insert_one({"q": user_input, "a": response.text})
-            st.toast("Đã lưu trí nhớ!")
+            st.toast("✅ Đã ghi nhớ!")
     except Exception as e:
-        st.error(f"Lỗi khi trả lời: {e}")
+        st.error(f"Lỗi: {e}")

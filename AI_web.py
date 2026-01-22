@@ -2,50 +2,34 @@ import streamlit as st
 import google.generativeai as genai
 from pymongo import MongoClient
 
-# 1. Kết nối an toàn
-try:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    client = MongoClient(st.secrets["MONGO_URL"])
-    db = client["LucasAI_DB"]
-    history_col = db["chat_history"]
-except:
-    st.error("Lỗi kết nối Secrets!")
+# 1. Cấu hình
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+client = MongoClient(st.secrets["MONGO_URL"])
+db = client["LucasAI_DB"]
+history_col = db["chat_history"]
 
-# 2. Cơ chế tự động chọn Model (Sửa lỗi 404 triệt để)
-def get_model():
-    # Danh sách các tên model có thể chạy được
-    model_names = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
-    for name in model_names:
-        try:
-            m = genai.GenerativeModel(name)
-            # Thử gọi một lệnh kiểm tra nhỏ
-            return m
-        except:
-            continue
-    return None
-
-model = get_model()
+# 2. SỬA LỖI 404: Dùng tên model rút gọn và ổn định nhất
+# Thay vì flash-latest, hãy dùng gemini-1.5-flash hoặc gemini-1.5-pro
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 st.title("🤖 Trợ lý Lucas AI")
-st.success("Hệ thống đã kết nối MongoDB thành công!")
+st.success("Kết nối MongoDB thành công!")
 
-user_input = st.text_input("Nhập câu hỏi của bạn:", key="user_query")
+user_input = st.text_input("Hãy hỏi tôi điều gì đó:")
 
 if user_input:
-    if model is None:
-        st.error("Không tìm thấy mô hình AI nào khả dụng. Kiểm tra lại API Key!")
-    else:
-        try:
-            response = model.generate_content(user_input)
-            st.markdown(f"**AI trả lời:** \n\n {response.text}")
-            
+    try:
+        # Sử dụng tham số stream=False để ổn định hơn
+        response = model.generate_content(user_input)
+        if response.text:
+            st.write(f"AI: {response.text}")
             # Lưu vào MongoDB
             history_col.insert_one({"q": user_input, "a": response.text})
-            st.toast("✅ Đã ghi nhớ!")
-        except Exception as e:
-            st.error(f"Lỗi: {e}")
-
-# Xem lịch sử
-if st.checkbox("Xem 3 câu hỏi gần nhất"):
-    for chat in history_col.find().sort("_id", -1).limit(3):
-        st.write(f"❓ {chat.get('q')}")
+            st.toast("Đã lưu trí nhớ!")
+    except Exception as e:
+        st.error(f"Lỗi: {e}")
+        st.info("Thử lại với model dự phòng...")
+        # Nếu vẫn 404, code sẽ tự thử bản 1.0 Pro
+        backup = genai.GenerativeModel('gemini-pro')
+        res = backup.generate_content(user_input)
+        st.write(f"AI (Dự phòng): {res.text}")

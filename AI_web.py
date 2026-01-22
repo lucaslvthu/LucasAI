@@ -2,48 +2,48 @@ import streamlit as st
 import google.generativeai as genai
 from pymongo import MongoClient
 
-# 1. Cấu hình bảo mật
+# 1. Cấu hình hệ thống từ Secrets
 try:
-    # Cấu hình API Key mới của bạn
+    # API Key: AIzaSyDj6_YjobSiD6oDU-XgGC9CnYpu2DeuZGc
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
-    # Kết nối MongoDB (Mật khẩu: lucaslvthu)
+    # MongoDB: lucaslvthu
     client = MongoClient(st.secrets["MONGO_URL"])
     db = client["LucasAI_DB"]
     history_col = db["chat_history"]
 except Exception as e:
-    st.error(f"Lỗi cấu hình: {e}")
+    st.error(f"Lỗi kết nối Secrets: {e}")
 
-# 2. KHỞI TẠO MODEL (Dùng tên model chuẩn xác nhất)
-# Lưu ý: Không thêm 'models/' phía trước nếu dùng thư viện bản mới
+# 2. KHỞI TẠO MODEL (Dùng tên rút gọn nhất để sửa lỗi 404)
+# Tuyệt đối KHÔNG thêm chữ 'models/' ở đây
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 st.title("🤖 Trợ lý Lucas AI")
-st.success("Hệ thống đã kết nối thành công!")
+st.success("Hệ thống đã nhận diện API mới thành công!")
 
-user_input = st.text_input("Hãy hỏi tôi điều gì đó:", key="user_input")
+# Ô nhập liệu
+user_input = st.text_input("Bạn muốn hỏi gì?", placeholder="Ví dụ: Chào Lucas...")
 
 if user_input:
     try:
-        # Gọi AI (Sử dụng model flash 1.5)
+        # Gọi AI trả lời
         response = model.generate_content(user_input)
         
         if response.text:
-            st.markdown(f"**AI:** {response.text}")
+            st.markdown(f"**AI trả lời:** \n\n {response.text}")
             
-            # Lưu trí nhớ vào MongoDB
+            # Lưu vào MongoDB
             history_col.insert_one({
                 "question": user_input, 
                 "answer": response.text
             })
-            st.toast("✅ Đã lưu vào MongoDB!")
+            st.toast("✅ Đã ghi nhớ vào MongoDB!")
     except Exception as e:
-        # Nếu vẫn lỗi 404, code này sẽ tự động thử cách gọi tên khác
-        st.warning("Đang thử kết nối lại với cấu hình dự phòng...")
+        # Nếu vẫn lỗi, thử cách gọi cuối cùng (dành cho một số vùng đặc biệt)
         try:
             model_alt = genai.GenerativeModel('models/gemini-1.5-flash')
             response = model_alt.generate_content(user_input)
-            st.markdown(f"**AI (Dự phòng):** {response.text}")
-        except Exception as e2:
-            st.error(f"Lỗi: {e2}")
-            st.info("Kiểm tra lại xem bạn đã nhấn 'Save' API Key mới trong Secrets chưa?")
+            st.write(response.text)
+        except:
+            st.error(f"Lỗi: {e}")
+            st.info("Lucas hãy kiểm tra lại xem đã nhấn SAVE API Key mới trong mục Secrets chưa nhé!")

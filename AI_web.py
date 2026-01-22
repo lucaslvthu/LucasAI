@@ -4,8 +4,12 @@ from pymongo import MongoClient
 
 # 1. Cấu hình bảo mật
 try:
-    # ÉP BUỘC SỬ DỤNG PHIÊN BẢN v1 (Đây là chìa khóa sửa lỗi 404)
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"], transport='rest')
+    # LẤY API KEY TỪ SECRETS
+    api_key = st.secrets["GEMINI_API_KEY"]
+    
+    # CẤU HÌNH QUAN TRỌNG: Ép sử dụng transport='rest' để dùng API v1
+    # Điều này sẽ giải quyết triệt để lỗi 404 v1beta trong logs của bạn
+    genai.configure(api_key=api_key, transport='rest')
     
     client = MongoClient(st.secrets["MONGO_URL"])
     db = client["LucasAI_DB"]
@@ -17,9 +21,9 @@ except Exception as e:
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 st.title("🤖 Trợ lý Lucas AI")
-st.success("Hệ thống đã nhận diện API và ép xung bản v1!")
+st.success("Hệ thống đã chuyển sang chế độ kết nối v1 ổn định!")
 
-user_input = st.text_input("Nhập câu hỏi của bạn:", placeholder="Chào bạn...")
+user_input = st.text_input("Hãy hỏi tôi điều gì đó:", key="user_query")
 
 if user_input:
     try:
@@ -29,9 +33,10 @@ if user_input:
         if response.text:
             st.markdown(f"**AI trả lời:** \n\n {response.text}")
             
-            # Lưu vào MongoDB
-            history_col.insert_one({"q": user_input, "a": response.text})
-            st.toast("✅ Đã ghi nhớ!")
+            # Lưu vào MongoDB (Mật khẩu: lucaslvthu)
+            history_col.insert_one({"question": user_input, "answer": response.text})
+            st.toast("✅ Đã ghi nhớ vào database!")
     except Exception as e:
-        # Nếu vẫn lỗi, liệt kê lỗi chi tiết để xử lý
+        # Nếu vẫn gặp lỗi, hiển thị chi tiết để xử lý
         st.error(f"Lỗi hệ thống: {e}")
+        st.info("Hãy đảm bảo bạn đã nhấn 'Save' trong phần Secrets của Streamlit.")

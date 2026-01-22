@@ -2,47 +2,30 @@ import streamlit as st
 import google.generativeai as genai
 from pymongo import MongoClient
 
-# 1. Kết nối hệ thống
+# 1. Cấu hình bảo mật
 try:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    # ÉP BUỘC SỬ DỤNG PHIÊN BẢN v1 (Đây là chìa khóa sửa lỗi 404)
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"], transport='rest')
+    
     client = MongoClient(st.secrets["MONGO_URL"])
     db = client["LucasAI_DB"]
     history_col = db["chat_history"]
 except Exception as e:
     st.error(f"Lỗi cấu hình: {e}")
 
-# 2. HÀM TỰ ĐỘNG TÌM MODEL (Khắc phục triệt để lỗi 404)
-@st.cache_resource
-def find_working_model():
-    # Thử danh sách model từ mới nhất đến cũ hơn
-    available_names = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
-    for name in available_names:
-        try:
-            m = genai.GenerativeModel(name)
-            # Thử tạo một phản hồi siêu ngắn để kiểm tra
-            m.generate_content("test")
-            return m
-        except:
-            continue
-    return None
-
-model = find_working_model()
+# 2. KHỞI TẠO MODEL (Dùng tên trực tiếp)
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 st.title("🤖 Trợ lý Lucas AI")
+st.success("Hệ thống đã nhận diện API và ép xung bản v1!")
 
-if model:
-    st.success("Hệ thống đã tìm thấy bộ não AI phù hợp và sẵn sàng!")
-else:
-    st.error("Không tìm thấy model khả dụng. Lucas hãy thử 'Reboot App' nhé!")
+user_input = st.text_input("Nhập câu hỏi của bạn:", placeholder="Chào bạn...")
 
-# 3. Giao diện Chat
-user_input = st.text_input("Nhập câu hỏi của bạn:", key="user_query")
-
-if user_input and model:
+if user_input:
     try:
-        with st.spinner('Đang suy nghĩ...'):
-            response = model.generate_content(user_input)
-            
+        # Gọi AI trả lời
+        response = model.generate_content(user_input)
+        
         if response.text:
             st.markdown(f"**AI trả lời:** \n\n {response.text}")
             
@@ -50,4 +33,5 @@ if user_input and model:
             history_col.insert_one({"q": user_input, "a": response.text})
             st.toast("✅ Đã ghi nhớ!")
     except Exception as e:
-        st.error(f"Lỗi: {e}")
+        # Nếu vẫn lỗi, liệt kê lỗi chi tiết để xử lý
+        st.error(f"Lỗi hệ thống: {e}")
